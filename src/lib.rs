@@ -1,14 +1,9 @@
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
-}
+use chrono::{FixedOffset, Utc};
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
+/// Gets current date on "%Y%m%d" format for Peru timezone
+pub fn get_peru_date() -> String {
+    Utc::now()
+        .with_timezone(&FixedOffset::west(5 * 3600))
+        .format("%Y%m%d")
+        .to_string()
 }
