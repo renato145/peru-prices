@@ -1,30 +1,29 @@
 use super::{Spider, SpiderError};
+use anyhow::Context;
 use async_trait::async_trait;
-use reqwest::Client;
-use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
-use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
-use reqwest_tracing::TracingMiddleware;
-use std::time::Duration;
+use fantoccini::{Client, ClientBuilder};
 
 pub struct MetroSpider {
     base_url: String,
     subroutes: Vec<String>,
-    client: ClientWithMiddleware,
+    client: Client,
 }
 
 impl MetroSpider {
-    pub fn new(base_url: String, subroutes: Vec<String>) -> Self {
-        let client = ClientBuilder::new(Client::new())
-            .with(TracingMiddleware::default())
-            .with(RetryTransientMiddleware::new_with_policy(
-                ExponentialBackoff::builder().build_with_max_retries(3),
-            ))
-            .build();
-        Self {
+    pub async fn new(base_url: String, subroutes: Vec<String>) -> Result<Self, SpiderError> {
+        let mut caps = serde_json::map::Map::new();
+        let chrome_opts = serde_json::json!({ "args": ["--headless", "--disable-gpu"] });
+        caps.insert("goog:chromeOptions".to_string(), chrome_opts);
+        let client = ClientBuilder::rustls()
+            .capabilities(caps)
+            .connect("http://localhost:4444")
+            .await
+            .context("Error connecting to webdriver")?;
+        Ok(Self {
             base_url,
             subroutes,
             client,
-        }
+        })
     }
 }
 
@@ -43,16 +42,13 @@ impl Spider for MetroSpider {
     }
 
     async fn scrape(&self, url: &str) -> Result<Vec<Self::Item>, SpiderError> {
-        let body = self
+        self.client.goto(url).await.context("Failed to go to url")?;
+        let html = self
             .client
-            .get(url)
-            .timeout(Duration::from_secs(5))
-            .send()
+            .source()
             .await
-            .map_err(SpiderError::RequestError)?
-            .text()
-            .await
-            .map_err(SpiderError::DecodeHtmlError)?;
-        todo!()
+            .context("Failed to obtain html content")?;
+        println!("{:?}", html);
+        Ok(vec![MetroItem])
     }
 }
