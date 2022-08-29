@@ -1,7 +1,7 @@
 _default:
   @just --choose
 
-watch_dev:
+watch-dev:
   cargo watch --clear -x "run"
 
 checks:
@@ -11,4 +11,7 @@ checks:
   cargo check --tests
   cargo clippy --all-targets
   cargo fmt --all -- --check
+
+run-driver:
+  chromedriver --port=4444 --disable-dev-shm-usage
 

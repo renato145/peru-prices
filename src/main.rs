@@ -30,6 +30,6 @@ async fn main() -> anyhow::Result<()> {
     .map(|x| x.to_owned())
     .collect();
     let spider = MetroSpider::new("https://www.metro.pe".to_string(), subroutes).await?;
-    spider.scrape_all().await;
+    let items = spider.scrape_all().await;
     Ok(())
 }

@@ -8,10 +8,10 @@ use futures::{stream, StreamExt};
 
 #[derive(thiserror::Error)]
 pub enum SpiderError {
-    #[error("Error on request")]
-    RequestError(#[source] reqwest_middleware::Error),
-    #[error("Error decoding html content")]
-    DecodeHtmlError(#[source] reqwest::Error),
+    #[error("Invalid selector: {0}")]
+    InvalidSelector(String),
+    #[error("No data found to be extracted: {0}")]
+    NoDataExtracted(String),
     #[error("Something went wrong.")]
     UnexpectedError(#[from] anyhow::Error),
 }
