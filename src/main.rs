@@ -25,13 +25,18 @@ async fn main() -> anyhow::Result<()> {
         // "cervezas-vinos-y-licores",
         // "limpieza",
         // "higiene-salud-y-belleza",
-    ]
-    .into_iter()
-    .map(|x| x.to_owned())
-    .collect();
-    let spider =
-        MetroSpider::new("https://www.metro.pe".to_string(), subroutes, 500, 250, 20).await?;
+    ];
+    let spider = MetroSpider::new(
+        "metro",
+        "https://www.metro.pe",
+        subroutes,
+        ".product-item",
+        500,
+        250,
+        20,
+    )
+    .await?;
     let crawler = Crawler::new(vec![spider]);
-    crawler.process_all().await;
+    crawler.process_all("output").await?;
     Ok(())
 }

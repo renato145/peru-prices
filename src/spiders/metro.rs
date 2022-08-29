@@ -3,12 +3,15 @@ use anyhow::{anyhow, Context};
 use async_trait::async_trait;
 use fantoccini::{Client, ClientBuilder, Locator};
 use scraper::{Html, Selector};
-use std::{collections::HashMap, time::Duration};
+use serde::Serialize;
+use std::{collections::HashMap, fmt, time::Duration};
 use tokio::time::sleep;
 
 pub struct MetroSpider {
+    name: String,
     base_url: String,
     subroutes: Vec<String>,
+    selector: Selector,
     client: Client,
     delay: Duration,
     /// Delay after scroll down
@@ -17,14 +20,30 @@ pub struct MetroSpider {
     scroll_checks: usize,
 }
 
+impl fmt::Display for MetroSpider {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "MetroSpider ({}, subroutes={})",
+            self.name,
+            self.subroutes.len()
+        )
+    }
+}
+
 impl MetroSpider {
     pub async fn new(
-        base_url: String,
-        subroutes: Vec<String>,
+        name: impl ToString,
+        base_url: impl ToString,
+        subroutes: Vec<impl ToString>,
+        selector: &str,
         delay_milis: u64,
         scroll_delay_milis: u64,
         scroll_checks: usize,
     ) -> Result<Self, SpiderError> {
+        let subroutes = subroutes.into_iter().map(|x| x.to_string()).collect();
+        let selector = Selector::parse(selector)
+            .map_err(|_| SpiderError::InvalidSelector(selector.to_string()))?;
         let mut caps = serde_json::map::Map::new();
         let chrome_opts = serde_json::json!({ "args": ["--headless", "--disable-gpu"] });
         caps.insert("goog:chromeOptions".to_string(), chrome_opts);
@@ -34,8 +53,10 @@ impl MetroSpider {
             .await
             .context("Error connecting to webdriver")?;
         Ok(Self {
-            base_url,
+            name: name.to_string(),
+            base_url: base_url.to_string(),
             subroutes,
+            selector,
             client,
             delay: Duration::from_millis(delay_milis),
             scroll_delay: Duration::from_millis(scroll_delay_milis),
@@ -88,7 +109,7 @@ impl MetroSpider {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct MetroItem {
     pub brand: Option<String>,
     pub uri: Option<String>,
@@ -130,6 +151,10 @@ impl TryFrom<HashMap<&str, &str>> for MetroItem {
 impl Spider for MetroSpider {
     type Item = MetroItem;
 
+    fn name(&self) -> &str {
+        &self.name
+    }
+
     fn base_url(&self) -> &str {
         &self.base_url
     }
@@ -160,10 +185,8 @@ impl Spider for MetroSpider {
             .await
             .context("Failed to obtain html content")?;
         let html = Html::parse_document(&document);
-        let selector = Selector::parse(".product-item")
-            .map_err(|_| SpiderError::InvalidSelector("TODO".to_string()))?;
         let elements = html
-            .select(&selector)
+            .select(&self.selector)
             .filter_map(|element| {
                 let map = element.value().attrs().collect::<HashMap<_, _>>();
                 match MetroItem::try_from(map) {

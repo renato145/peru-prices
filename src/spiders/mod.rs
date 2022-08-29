@@ -1,5 +1,6 @@
 mod metro;
 pub use metro::*;
+use serde::Serialize;
 use tokio::time::sleep;
 
 use crate::error_chain_fmt;
@@ -25,8 +26,9 @@ impl std::fmt::Debug for SpiderError {
 
 #[async_trait]
 pub trait Spider {
-    type Item: Send + Sync + std::fmt::Debug;
+    type Item: Send + Sync + std::fmt::Debug + Serialize + 'static;
 
+    fn name(&self) -> &str;
     fn base_url(&self) -> &str;
     fn subroutes(&self) -> &[String];
     /// Delay to scrap between subroutes
@@ -35,7 +37,7 @@ pub trait Spider {
 
     #[tracing::instrument(skip_all)]
     async fn scrape_all(&self) -> Vec<Self::Item> {
-        tracing::info!("Starting scrapping on {:?}", self.base_url());
+        tracing::info!("Start scrapping on {:?}", self.base_url());
         stream::iter(self.subroutes())
             .enumerate()
             .filter_map(|(i, subroute)| async move {
