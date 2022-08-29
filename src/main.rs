@@ -1,4 +1,4 @@
-use peru_prices::spiders::{MetroSpider, Spider};
+use peru_prices::{crawler::Crawler, spiders::MetroSpider};
 use tracing_subscriber::{
     prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt, EnvFilter,
 };
@@ -29,7 +29,9 @@ async fn main() -> anyhow::Result<()> {
     .into_iter()
     .map(|x| x.to_owned())
     .collect();
-    let spider = MetroSpider::new("https://www.metro.pe".to_string(), subroutes).await?;
-    let items = spider.scrape_all().await;
+    let spider =
+        MetroSpider::new("https://www.metro.pe".to_string(), subroutes, 500, 250, 20).await?;
+    let crawler = Crawler::new(vec![spider]);
+    crawler.process_all().await;
     Ok(())
 }

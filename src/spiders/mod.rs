@@ -1,10 +1,11 @@
 mod metro;
-
 pub use metro::*;
+use tokio::time::sleep;
 
 use crate::error_chain_fmt;
 use async_trait::async_trait;
 use futures::{stream, StreamExt};
+use std::time::Duration;
 
 #[derive(thiserror::Error)]
 pub enum SpiderError {
@@ -24,17 +25,23 @@ impl std::fmt::Debug for SpiderError {
 
 #[async_trait]
 pub trait Spider {
-    type Item: Send;
+    type Item: Send + Sync + std::fmt::Debug;
 
     fn base_url(&self) -> &str;
     fn subroutes(&self) -> &[String];
+    /// Delay to scrap between subroutes
+    fn delay(&self) -> Duration;
     async fn scrape(&self, url: &str) -> Result<Vec<Self::Item>, SpiderError>;
 
     #[tracing::instrument(skip_all)]
     async fn scrape_all(&self) -> Vec<Self::Item> {
         tracing::info!("Starting scrapping on {:?}", self.base_url());
         stream::iter(self.subroutes())
-            .filter_map(|subroute| async move {
+            .enumerate()
+            .filter_map(|(i, subroute)| async move {
+                if i > 0 {
+                    sleep(self.delay()).await;
+                }
                 let subroute = format!("{}/{}", self.base_url(), subroute);
                 match self.scrape(&subroute).await {
                     Ok(item) => Some(item),
