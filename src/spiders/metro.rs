@@ -37,6 +37,7 @@ impl fmt::Display for MetroSpider {
 }
 
 impl MetroSpider {
+    #[allow(clippy::too_many_arguments)]
     pub async fn new(
         name: impl ToString,
         base_url: impl ToString,
@@ -45,15 +46,21 @@ impl MetroSpider {
         delay_milis: u64,
         scroll_delay_milis: u64,
         scroll_checks: usize,
+        headless: bool,
     ) -> Result<Self, SpiderError> {
         let subroutes = subroutes.into_iter().map(|x| x.to_string()).collect();
         let selector = Selector::parse(selector)
             .map_err(|_| SpiderError::InvalidSelector(selector.to_string()))?;
-        let mut caps = serde_json::map::Map::new();
-        let chrome_opts = serde_json::json!({ "args": ["--headless", "--disable-gpu"] });
-        caps.insert("goog:chromeOptions".to_string(), chrome_opts);
-        let client = ClientBuilder::rustls()
-            .capabilities(caps)
+
+        let mut client = ClientBuilder::rustls();
+        if headless {
+            let mut caps = serde_json::map::Map::new();
+            let chrome_opts = serde_json::json!({ "args": ["--headless", "--disable-gpu"] });
+            caps.insert("goog:chromeOptions".to_string(), chrome_opts);
+            client.capabilities(caps);
+        }
+
+        let client = client
             .connect("http://localhost:4444")
             .await
             .context("Error connecting to webdriver")?;

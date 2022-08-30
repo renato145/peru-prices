@@ -1,5 +1,6 @@
 use crate::{error_chain_fmt, get_peru_date, spawn_blocking_with_tracing, spiders::Spider};
 use anyhow::Context;
+use futures::{future, stream, StreamExt};
 use std::{
     fmt::Display,
     io::BufWriter,
@@ -38,7 +39,11 @@ where
 
     /// Process all spiders and save results on `out_path`
     #[tracing::instrument(skip_all)]
-    pub async fn process_all(&self, out_path: impl AsRef<Path>) -> Result<(), CrawlerError> {
+    pub async fn process_all(
+        self,
+        out_path: impl AsRef<Path>,
+        crawlers_buffer_size: usize,
+    ) -> Result<(), CrawlerError> {
         let out_path = out_path.as_ref().to_path_buf();
         if !out_path.exists() {
             create_dir(&out_path)
@@ -48,18 +53,25 @@ where
             return Err(CrawlerError::OutPathNoDir(out_path));
         }
         let date = get_peru_date();
-        for spider in &self.spiders {
-            if let Err(e) = process_one(&out_path, spider, &date).await {
-                tracing::error!(error.cause_chain = ?e, error.message = %e, "Failed to process spider: {}", spider);
-            }
-        }
+
+        stream::iter(self.spiders.into_iter())
+            .map(|spider| process_one(out_path.clone(), spider, date.clone()))
+            .buffer_unordered(crawlers_buffer_size)
+            .for_each(|res| {
+                tracing::info!("yay");
+                if let Err(e) = res {
+                    tracing::error!(error.cause_chain = ?e, error.message = %e, "Failed to process spider");
+                }
+                future::ready(())
+            }).await;
+
         Ok(())
     }
 }
 
 /// Process and save results on of a spider
 #[tracing::instrument(fields(spider=%spider))]
-async fn process_one<T>(out_path: &PathBuf, spider: &T, date: &str) -> Result<(), CrawlerError>
+async fn process_one<T>(out_path: PathBuf, spider: T, date: String) -> Result<(), CrawlerError>
 where
     T: Spider + Sync + Display,
 {

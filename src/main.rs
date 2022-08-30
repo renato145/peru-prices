@@ -21,9 +21,10 @@ async fn main() -> anyhow::Result<()> {
         configuration.metro.delay_milis,
         configuration.metro.scroll_delay_milis,
         configuration.metro.scroll_checks,
+        configuration.metro.headless,
     )
     .await?;
     let crawler = Crawler::new(vec![spider]);
-    crawler.process_all(configuration.out_path).await?;
+    crawler.process_all(configuration.out_path, configuration.crawlers_buffer_size).await?;
     Ok(())
 }

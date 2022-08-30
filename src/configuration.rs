@@ -5,6 +5,7 @@ use std::path::PathBuf;
 #[derive(Debug, Deserialize)]
 pub struct Settings {
     pub out_path: PathBuf,
+    pub crawlers_buffer_size: usize,
     pub metro: MetroSettings,
 }
 
@@ -17,6 +18,7 @@ pub struct MetroSettings {
     pub delay_milis: u64,
     pub scroll_delay_milis: u64,
     pub scroll_checks: usize,
+    pub headless: bool,
 }
 
 pub fn get_configuration() -> Result<Settings, config::ConfigError> {
