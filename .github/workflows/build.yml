@@ -17,7 +17,6 @@ jobs:
           toolchain: stable
       - name: Build binary
         run: |
-          cd news_scrapper
           cargo build --release
           tar -czf peru-prices.tar.gz target/release/peru-prices
           git config user.name "github-actions"
