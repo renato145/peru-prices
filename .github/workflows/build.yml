@@ -18,7 +18,8 @@ jobs:
       - name: Build binary
         run: |
           cargo build --release
-          tar -czf peru-prices.tar.gz target/release/peru-prices
+          mv target/release/peru-prices .
+          tar -czf peru-prices.tar.gz peru-prices
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           git add peru-prices.tar.gz
