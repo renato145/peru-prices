@@ -10,14 +10,15 @@ use std::{
     hash::Hash,
     time::Duration,
 };
-use tokio::time::sleep;
+use tokio::{sync::Mutex, time::sleep};
 
 pub struct MetroSpider {
     name: String,
     base_url: String,
     subroutes: Vec<String>,
     selector: Selector,
-    client: Client,
+    /// Mutex is used to lock multiple access to the webdriver
+    client: Mutex<Client>,
     delay: Duration,
     /// Delay after scroll down
     scroll_delay: Duration,
@@ -69,16 +70,15 @@ impl MetroSpider {
             base_url: base_url.to_string(),
             subroutes,
             selector,
-            client,
+            client: Mutex::new(client),
             delay: Duration::from_millis(delay_milis),
             scroll_delay: Duration::from_millis(scroll_delay_milis),
             scroll_checks,
         })
     }
 
-    async fn get_height(&self) -> Result<i64, SpiderError> {
-        let value = self
-            .client
+    async fn get_height(&self, client: &Client) -> Result<i64, SpiderError> {
+        let value = client
             .execute("return document.body.scrollHeight", vec![])
             .await
             .context("Failed to get height")?;
@@ -89,9 +89,9 @@ impl MetroSpider {
     }
 
     #[tracing::instrument(skip_all)]
-    async fn scroll_down(&self) -> Result<(), SpiderError> {
+    async fn scroll_down(&self, client: &Client) -> Result<(), SpiderError> {
         tracing::debug!("Scrolling down");
-        self.client
+        client
             .execute("window.scrollTo(0, document.body.scrollHeight);", vec![])
             .await
             .context("Failed to scroll down")?;
@@ -99,14 +99,14 @@ impl MetroSpider {
     }
 
     #[tracing::instrument(skip_all)]
-    async fn scroll_to_end(&self) -> Result<(), SpiderError> {
-        let mut height = self.get_height().await?;
+    async fn scroll_to_end(&self, client: &Client) -> Result<(), SpiderError> {
+        let mut height = self.get_height(client).await?;
         tracing::debug!("height={}", height);
         let mut i = 0;
         loop {
-            self.scroll_down().await?;
+            self.scroll_down(client).await?;
             sleep(self.scroll_delay).await;
-            let new_height = self.get_height().await?;
+            let new_height = self.get_height(client).await?;
             tracing::debug!("new_height={}", new_height);
             if new_height == height {
                 i += 1;
@@ -212,21 +212,23 @@ impl Spider for MetroSpider {
 
     #[tracing::instrument(skip(self))]
     async fn scrape(&self, url: &str) -> Result<Vec<Self::Item>, SpiderError> {
-        self.client.goto(url).await.context("Failed to go to url")?;
-        self.client
-            .wait()
-            .at_most(Duration::from_secs(5))
-            .for_element(Locator::Css(".product-item"))
-            .await
-            .context("Failed to wait for element")?;
-        if let Err(e) = self.scroll_to_end().await {
-            tracing::error!(error.cause_chain = ?e, error.message = %e, "Failed to scroll to end");
-        }
-        let document = self
-            .client
-            .source()
-            .await
-            .context("Failed to obtain html content")?;
+        let document = {
+            let client = self.client.lock().await;
+            client.goto(url).await.context("Failed to go to url")?;
+            client
+                .wait()
+                .at_most(Duration::from_secs(5))
+                .for_element(Locator::Css(".product-item"))
+                .await
+                .context("Failed to wait for element")?;
+            if let Err(e) = self.scroll_to_end(&client).await {
+                tracing::error!(error.cause_chain = ?e, error.message = %e, "Failed to scroll to end");
+            }
+            client
+                .source()
+                .await
+                .context("Failed to obtain html content")?
+        };
         let html = Html::parse_document(&document);
         let elements = html
             .select(&self.selector)
