@@ -1,0 +1,16 @@
+out_path: "output"
+metro:
+  subroutes:
+    - "frutas-y-verduras"
+    - "carnes-aves-y-pescados"
+    - "desayuno"
+    - "lacteos"
+    - "embutidos-y-fiambres"
+    - "abarrotes"
+    - "panaderia-y-pasteleria"
+    - "comidas-y-rostizados"
+    - "congelados"
+    - "aguas-y-bebidas"
+    - "cervezas-vinos-y-licores"
+    - "limpieza"
+    - "higiene-salud-y-belleza"

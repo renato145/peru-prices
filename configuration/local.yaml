@@ -1,0 +1,6 @@
+out_path: "output_dev"
+metro:
+  subroutes:
+    - "frutas-y-verduras"
+    - "carnes-aves-y-pescados"
+  scroll_checks: 1

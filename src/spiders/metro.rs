@@ -156,9 +156,10 @@ impl TryFrom<HashMap<&str, &str>> for MetroItem {
             .remove("data-price")
             .map(|x| {
                 x.replace("S/.", "")
+                    .replace(',', "")
                     .trim()
                     .parse()
-                    .context("Failed to parse price")
+                    .with_context(|| format!("Failed to parse price from: {:?}", x))
             })
             .transpose()?;
         let category = map.remove("data-category").map(String::from);

@@ -1,4 +1,4 @@
-use peru_prices::{crawler::Crawler, spiders::MetroSpider};
+use peru_prices::{configuration::get_configuration, crawler::Crawler, spiders::MetroSpider};
 use tracing_subscriber::{
     prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt, EnvFilter,
 };
@@ -9,34 +9,21 @@ async fn main() -> anyhow::Result<()> {
         .with(tracing_subscriber::fmt::layer())
         .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")))
         .init();
+    let configuration = get_configuration().expect("Failed to get configuration");
     tracing::info!("Initializing scrappers...");
+    tracing::debug!("{:#?}", configuration);
 
-    let subroutes = vec![
-        "frutas-y-verduras",
-        // "carnes-aves-y-pescados",
-        // "desayuno",
-        // "lacteos",
-        // "embutidos-y-fiambres",
-        // "abarrotes",
-        // "panaderia-y-pasteleria",
-        // "comidas-y-rostizados",
-        // "congelados",
-        // "aguas-y-bebidas",
-        // "cervezas-vinos-y-licores",
-        // "limpieza",
-        // "higiene-salud-y-belleza",
-    ];
     let spider = MetroSpider::new(
-        "metro",
-        "https://www.metro.pe",
-        subroutes,
-        ".product-item",
-        500,
-        250,
-        20,
+        configuration.metro.name,
+        configuration.metro.base_url,
+        configuration.metro.subroutes,
+        &configuration.metro.selector,
+        configuration.metro.delay_milis,
+        configuration.metro.scroll_delay_milis,
+        configuration.metro.scroll_checks,
     )
     .await?;
     let crawler = Crawler::new(vec![spider]);
-    crawler.process_all("output").await?;
+    crawler.process_all(configuration.out_path).await?;
     Ok(())
 }

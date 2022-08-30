@@ -1,3 +1,4 @@
+pub mod configuration;
 pub mod crawler;
 pub mod spiders;
 

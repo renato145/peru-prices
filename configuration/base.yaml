@@ -1,0 +1,7 @@
+metro:
+  name: "metro"
+  base_url: "https://www.metro.pe"
+  selector: ".product-item"
+  delay_milis: 500
+  scroll_delay_milis: 250
+  scroll_checks: 20
