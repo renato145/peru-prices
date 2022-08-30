@@ -1,0 +1,24 @@
+name: Launch script
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 10 * * *'
+
+jobs:
+  launch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: nanasess/setup-chromedriver@v1
+      - name: Run scrapper and push
+        run: |
+          export DISPLAY=:99
+          chromedriver --port=4444 --disable-dev-shm-usage &
+          tar -xzf peru-prices.tar.gz
+          APP_ENVIRONMENT=production ./peru-prices
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add data
+          timestamp=$(date -u)
+          git commit -m "Latest data: ${timestamp}" || exit 0
+          git push
