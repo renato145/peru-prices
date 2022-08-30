@@ -1,0 +1,28 @@
+name: Build and commit
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - name: Build binary
+        run: |
+          cd news_scrapper
+          cargo build --release
+          tar -czf peru-prices.tar.gz target/release/peru-prices
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add peru-prices.tar.gz
+          timestamp=$(date -u)
+          git commit -m "Latest bin build: ${timestamp}" || exit 0
+          git push
