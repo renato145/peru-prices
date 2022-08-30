@@ -4,7 +4,12 @@ use async_trait::async_trait;
 use fantoccini::{Client, ClientBuilder, Locator};
 use scraper::{Html, Selector};
 use serde::Serialize;
-use std::{collections::HashMap, fmt, time::Duration};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt,
+    hash::Hash,
+    time::Duration,
+};
 use tokio::time::sleep;
 
 pub struct MetroSpider {
@@ -111,11 +116,28 @@ impl MetroSpider {
 
 #[derive(Debug, Serialize)]
 pub struct MetroItem {
+    pub id: String,
     pub brand: Option<String>,
     pub uri: Option<String>,
     pub name: Option<String>,
-    pub price: Option<String>,
+    pub price: Option<f64>,
     pub category: Option<String>,
+}
+
+impl PartialEq for MetroItem {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
+impl Eq for MetroItem {
+    fn assert_receiver_is_total_eq(&self) {}
+}
+
+impl Hash for MetroItem {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
+    }
 }
 
 impl TryFrom<HashMap<&str, &str>> for MetroItem {
@@ -123,10 +145,22 @@ impl TryFrom<HashMap<&str, &str>> for MetroItem {
 
     fn try_from(mut map: HashMap<&str, &str>) -> Result<Self, Self::Error> {
         tracing::debug!("Received data: {:?}", map);
+        let id = map
+            .remove("data-id")
+            .map(String::from)
+            .context("Failed to obtain item id")?;
         let brand = map.remove("data-brand").map(String::from);
         let uri = map.remove("data-uri").map(String::from);
         let name = map.remove("data-name").map(String::from);
-        let price = map.remove("data-price").map(String::from);
+        let price = map
+            .remove("data-price")
+            .map(|x| {
+                x.replace("S/.", "")
+                    .trim()
+                    .parse()
+                    .context("Failed to parse price")
+            })
+            .transpose()?;
         let category = map.remove("data-category").map(String::from);
         if brand.is_none()
             && uri.is_none()
@@ -137,6 +171,7 @@ impl TryFrom<HashMap<&str, &str>> for MetroItem {
             Err(SpiderError::NoDataExtracted(format!("{:?}", map)))
         } else {
             Ok(Self {
+                id,
                 brand,
                 uri,
                 name,
@@ -197,6 +232,8 @@ impl Spider for MetroSpider {
                     }
                 }
             })
+            .collect::<HashSet<_>>()
+            .into_iter()
             .collect::<Vec<_>>();
         tracing::info!("Found {} elements", elements.len());
         Ok(elements)
