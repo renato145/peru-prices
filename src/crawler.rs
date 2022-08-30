@@ -43,6 +43,7 @@ where
         self,
         out_path: impl AsRef<Path>,
         crawlers_buffer_size: usize,
+        spiders_buffer_size: usize,
     ) -> Result<(), CrawlerError> {
         let out_path = out_path.as_ref().to_path_buf();
         if !out_path.exists() {
@@ -55,7 +56,7 @@ where
         let date = get_peru_date();
 
         stream::iter(self.spiders.into_iter())
-            .map(|spider| process_one(out_path.clone(), spider, date.clone()))
+            .map(|spider| process_one(out_path.clone(), spider, date.clone(), spiders_buffer_size))
             .buffer_unordered(crawlers_buffer_size)
             .for_each(|res| {
                 tracing::info!("yay");
@@ -71,7 +72,12 @@ where
 
 /// Process and save results on of a spider
 #[tracing::instrument(fields(spider=%spider))]
-async fn process_one<T>(out_path: PathBuf, spider: T, date: String) -> Result<(), CrawlerError>
+async fn process_one<T>(
+    out_path: PathBuf,
+    spider: T,
+    date: String,
+    spiders_buffer_size: usize,
+) -> Result<(), CrawlerError>
 where
     T: Spider + Sync + Display,
 {
@@ -82,7 +88,7 @@ where
         .context("Failed to create file")?
         .into_std()
         .await;
-    let items = spider.scrape_all().await;
+    let items = spider.scrape_all(spiders_buffer_size).await;
     spawn_blocking_with_tracing(move || {
         let mut wtr = csv::Writer::from_writer(BufWriter::new(file));
         items.into_iter().for_each(|item| {

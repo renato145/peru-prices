@@ -6,6 +6,7 @@ use std::path::PathBuf;
 pub struct Settings {
     pub out_path: PathBuf,
     pub crawlers_buffer_size: usize,
+    pub spiders_buffer_size: usize,
     pub metro: MetroSettings,
 }
 

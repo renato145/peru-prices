@@ -35,22 +35,26 @@ pub trait Spider {
     fn delay(&self) -> Duration;
     async fn scrape(&self, url: &str) -> Result<Vec<Self::Item>, SpiderError>;
 
-    #[tracing::instrument(skip_all)]
-    async fn scrape_all(&self) -> Vec<Self::Item> {
+    #[tracing::instrument(skip(self))]
+    async fn scrape_all(&self, spiders_buffer_size: usize) -> Vec<Self::Item> {
         tracing::info!("Start scrapping on {:?}", self.base_url());
-        stream::iter(self.subroutes())
+        stream::iter(self.subroutes().iter().cloned())
             .enumerate()
-            .filter_map(|(i, subroute)| async move {
+            .map(|(i, subroute)| async move {
                 if i > 0 {
                     sleep(self.delay()).await;
                 }
                 let subroute = format!("{}/{}", self.base_url(), subroute);
-                match self.scrape(&subroute).await {
-                    Ok(item) => Some(item),
+                self.scrape(&subroute).await
+            })
+            .buffer_unordered(spiders_buffer_size)
+            .filter_map(|res| async {
+                match res {
+                    Ok(items) => Some(items),
                     Err(e) => {
                         tracing::error!(error.cause_chain = ?e,
                                         error.message = %e,
-                                        "Failed to scrape {:?}", subroute);
+                                        "Failed to scrape subroute");
                         None
                     }
                 }

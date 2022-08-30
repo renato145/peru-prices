@@ -25,6 +25,12 @@ async fn main() -> anyhow::Result<()> {
     )
     .await?;
     let crawler = Crawler::new(vec![spider]);
-    crawler.process_all(configuration.out_path, configuration.crawlers_buffer_size).await?;
+    crawler
+        .process_all(
+            configuration.out_path,
+            configuration.crawlers_buffer_size,
+            configuration.spiders_buffer_size,
+        )
+        .await?;
     Ok(())
 }
