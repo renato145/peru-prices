@@ -6,7 +6,7 @@ use tokio::time::sleep;
 use crate::error_chain_fmt;
 use async_trait::async_trait;
 use futures::{stream, StreamExt};
-use std::time::Duration;
+use std::{collections::HashSet, time::Duration, hash::Hash};
 
 #[derive(thiserror::Error)]
 pub enum SpiderError {
@@ -26,7 +26,7 @@ impl std::fmt::Debug for SpiderError {
 
 #[async_trait]
 pub trait Spider {
-    type Item: Send + Sync + std::fmt::Debug + Serialize + 'static;
+    type Item: std::fmt::Debug + Eq + Hash + Send + Sync + Serialize + 'static;
 
     fn name(&self) -> &str;
     fn base_url(&self) -> &str;
@@ -63,6 +63,8 @@ pub trait Spider {
             .await
             .into_iter()
             .flatten()
+            .collect::<HashSet<_>>()
+            .into_iter()
             .collect()
     }
 }
