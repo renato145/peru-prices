@@ -59,7 +59,6 @@ where
             .map(|spider| process_one(out_path.clone(), spider, date.clone(), spiders_buffer_size))
             .buffer_unordered(crawlers_buffer_size)
             .for_each(|res| {
-                tracing::info!("yay");
                 if let Err(e) = res {
                     tracing::error!(error.cause_chain = ?e, error.message = %e, "Failed to process spider");
                 }
