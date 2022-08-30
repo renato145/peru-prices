@@ -3,4 +3,5 @@ metro:
   subroutes:
     - "frutas-y-verduras"
     - "carnes-aves-y-pescados"
-  scroll_checks: 1
+    - "desayuno"
+  scroll_checks: 2
