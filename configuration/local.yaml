@@ -2,6 +2,5 @@ out_path: "output_dev"
 metro:
   subroutes:
     - "frutas-y-verduras"
-    - "carnes-aves-y-pescados"
     - "desayuno"
   scroll_checks: 2

@@ -1,12 +1,12 @@
 mod metro;
 pub use metro::*;
-use serde::Serialize;
-use tokio::time::sleep;
 
 use crate::error_chain_fmt;
 use async_trait::async_trait;
 use futures::{stream, StreamExt};
-use std::{collections::HashSet, time::Duration, hash::Hash};
+use serde::Serialize;
+use std::{collections::HashSet, hash::Hash, time::Duration};
+use tokio::time::sleep;
 
 #[derive(thiserror::Error)]
 pub enum SpiderError {
@@ -37,7 +37,6 @@ pub trait Spider {
 
     #[tracing::instrument(skip(self))]
     async fn scrape_all(&self, spiders_buffer_size: usize) -> Vec<Self::Item> {
-        tracing::info!("Start scrapping on {:?}", self.base_url());
         stream::iter(self.subroutes().iter().cloned())
             .enumerate()
             .map(|(i, subroute)| async move {

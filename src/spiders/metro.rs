@@ -30,8 +30,9 @@ impl fmt::Display for MetroSpider {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "MetroSpider ({}, subroutes={})",
+            "MetroSpider ({}, url={}, subroutes={})",
             self.name,
+            self.base_url,
             self.subroutes.len()
         )
     }

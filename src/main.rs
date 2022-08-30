@@ -1,4 +1,5 @@
 use peru_prices::{configuration::get_configuration, crawler::Crawler, spiders::MetroSpider};
+use tokio::time::Instant;
 use tracing_subscriber::{
     prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt, EnvFilter,
 };
@@ -12,6 +13,7 @@ async fn main() -> anyhow::Result<()> {
     let configuration = get_configuration().expect("Failed to get configuration");
     tracing::info!("Initializing scrappers...");
     tracing::debug!("{:#?}", configuration);
+    let now = Instant::now();
 
     let spider = MetroSpider::new(
         configuration.metro.name,
@@ -32,5 +34,6 @@ async fn main() -> anyhow::Result<()> {
             configuration.spiders_buffer_size,
         )
         .await?;
+    tracing::info!("Finished in {:?}", now.elapsed());
     Ok(())
 }

@@ -2,11 +2,14 @@ use crate::{error_chain_fmt, get_peru_date, spawn_blocking_with_tracing, spiders
 use anyhow::Context;
 use futures::{future, stream, StreamExt};
 use std::{
-    fmt::Display,
+    fmt::{Debug, Display},
     io::BufWriter,
     path::{Path, PathBuf},
 };
-use tokio::fs::{create_dir, File};
+use tokio::{
+    fs::{create_dir, File},
+    time::Instant,
+};
 
 #[derive(thiserror::Error)]
 pub enum CrawlerError {
@@ -38,10 +41,10 @@ where
     }
 
     /// Process all spiders and save results on `out_path`
-    #[tracing::instrument(skip_all)]
+    #[tracing::instrument(skip(self))]
     pub async fn process_all(
         self,
-        out_path: impl AsRef<Path>,
+        out_path: impl AsRef<Path> + Debug,
         crawlers_buffer_size: usize,
         spiders_buffer_size: usize,
     ) -> Result<(), CrawlerError> {
@@ -80,6 +83,8 @@ async fn process_one<T>(
 where
     T: Spider + Sync + Display,
 {
+    tracing::info!("Start scrapping");
+    let now = Instant::now();
     let mut path = out_path.clone();
     path.push(format!("{}_{}.csv", spider.name(), date));
     let file = File::create(path)
@@ -96,6 +101,6 @@ where
     })
     .await
     .context("Failed to join task")?;
-    tracing::info!("Done");
+    tracing::info!("Scraped in {:?}", now.elapsed());
     Ok(())
 }
