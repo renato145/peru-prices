@@ -4,3 +4,8 @@ metro:
     - "frutas-y-verduras"
     - "desayuno"
   scroll_checks: 2
+wong:
+  subroutes:
+    - "frutas-y-verduras"
+    - "desayuno"
+  scroll_checks: 2

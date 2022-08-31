@@ -1,5 +1,5 @@
-mod metro;
-pub use metro::*;
+mod infinite_scrolling;
+pub use infinite_scrolling::*;
 
 use crate::error_chain_fmt;
 use async_trait::async_trait;

@@ -1,4 +1,5 @@
 use super::{Spider, SpiderError};
+use crate::configuration::InfiniteScrollingSettings;
 use anyhow::{anyhow, Context};
 use async_trait::async_trait;
 use fantoccini::{Client, ClientBuilder, Locator};
@@ -12,7 +13,7 @@ use std::{
 };
 use tokio::{sync::Mutex, time::sleep};
 
-pub struct MetroSpider {
+pub struct InfiniteScrollingSpider {
     name: String,
     base_url: String,
     subroutes: Vec<String>,
@@ -26,11 +27,11 @@ pub struct MetroSpider {
     scroll_checks: usize,
 }
 
-impl fmt::Display for MetroSpider {
+impl fmt::Display for InfiniteScrollingSpider {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "MetroSpider ({}, url={}, subroutes={})",
+            "{} (url={}, subroutes={})",
             self.name,
             self.base_url,
             self.subroutes.len()
@@ -38,7 +39,7 @@ impl fmt::Display for MetroSpider {
     }
 }
 
-impl MetroSpider {
+impl InfiniteScrollingSpider {
     #[allow(clippy::too_many_arguments)]
     pub async fn new(
         name: impl ToString,
@@ -76,6 +77,23 @@ impl MetroSpider {
             scroll_delay: Duration::from_millis(scroll_delay_milis),
             scroll_checks,
         })
+    }
+
+    pub async fn from_settings(
+        settings: InfiniteScrollingSettings,
+        headless: bool,
+    ) -> Result<Self, SpiderError> {
+        Self::new(
+            settings.name,
+            settings.base_url,
+            settings.subroutes,
+            &settings.selector,
+            settings.delay_milis,
+            settings.scroll_delay_milis,
+            settings.scroll_checks,
+            headless,
+        )
+        .await
     }
 
     async fn get_height(&self, client: &Client) -> Result<i64, SpiderError> {
@@ -123,7 +141,7 @@ impl MetroSpider {
 }
 
 #[derive(Debug, Serialize)]
-pub struct MetroItem {
+pub struct InfiniteScrollingItem {
     pub id: String,
     pub brand: Option<String>,
     pub uri: Option<String>,
@@ -132,23 +150,23 @@ pub struct MetroItem {
     pub category: Option<String>,
 }
 
-impl PartialEq for MetroItem {
+impl PartialEq for InfiniteScrollingItem {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
     }
 }
 
-impl Eq for MetroItem {
+impl Eq for InfiniteScrollingItem {
     fn assert_receiver_is_total_eq(&self) {}
 }
 
-impl Hash for MetroItem {
+impl Hash for InfiniteScrollingItem {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.id.hash(state);
     }
 }
 
-impl TryFrom<HashMap<&str, &str>> for MetroItem {
+impl TryFrom<HashMap<&str, &str>> for InfiniteScrollingItem {
     type Error = SpiderError;
 
     fn try_from(mut map: HashMap<&str, &str>) -> Result<Self, Self::Error> {
@@ -192,8 +210,8 @@ impl TryFrom<HashMap<&str, &str>> for MetroItem {
 }
 
 #[async_trait]
-impl Spider for MetroSpider {
-    type Item = MetroItem;
+impl Spider for InfiniteScrollingSpider {
+    type Item = InfiniteScrollingItem;
 
     fn name(&self) -> &str {
         &self.name
@@ -235,7 +253,7 @@ impl Spider for MetroSpider {
             .select(&self.selector)
             .filter_map(|element| {
                 let map = element.value().attrs().collect::<HashMap<_, _>>();
-                match MetroItem::try_from(map) {
+                match InfiniteScrollingItem::try_from(map) {
                     Ok(item) => Some(item),
                     Err(e) => {
                         tracing::error!(error.cause_chain = ?e, error.message = %e, "Error reading item");

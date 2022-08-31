@@ -1,4 +1,6 @@
-use peru_prices::{configuration::get_configuration, crawler::Crawler, spiders::MetroSpider};
+use peru_prices::{
+    configuration::get_configuration, crawler::Crawler, spiders::InfiniteScrollingSpider,
+};
 use tokio::time::Instant;
 use tracing_subscriber::{
     prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt, EnvFilter,
@@ -15,18 +17,11 @@ async fn main() -> anyhow::Result<()> {
     tracing::debug!("{:#?}", configuration);
     let now = Instant::now();
 
-    let spider = MetroSpider::new(
-        configuration.metro.name,
-        configuration.metro.base_url,
-        configuration.metro.subroutes,
-        &configuration.metro.selector,
-        configuration.metro.delay_milis,
-        configuration.metro.scroll_delay_milis,
-        configuration.metro.scroll_checks,
-        configuration.metro.headless,
-    )
-    .await?;
-    let crawler = Crawler::new(vec![spider]);
+    let spiders = vec![
+        InfiniteScrollingSpider::from_settings(configuration.metro, configuration.headless).await?,
+        InfiniteScrollingSpider::from_settings(configuration.wong, configuration.headless).await?,
+    ];
+    let crawler = Crawler::new(spiders);
     crawler
         .process_all(
             configuration.out_path,

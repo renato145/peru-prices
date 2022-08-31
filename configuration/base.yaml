@@ -1,5 +1,6 @@
 crawlers_buffer_size: 2
 spiders_buffer_size: 3
+headless: true
 metro:
   name: "metro"
   base_url: "https://www.metro.pe"
@@ -7,4 +8,10 @@ metro:
   delay_milis: 500
   scroll_delay_milis: 250
   scroll_checks: 20
-  headless: true
+wong:
+  name: "wong"
+  base_url: "https://www.wong.pe"
+  selector: ".product-item"
+  delay_milis: 500
+  scroll_delay_milis: 250
+  scroll_checks: 20
