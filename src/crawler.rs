@@ -1,6 +1,6 @@
 use crate::{error_chain_fmt, get_peru_date, spawn_blocking_with_tracing, spiders::Spider};
 use anyhow::Context;
-use futures::{future, stream, StreamExt};
+use futures::{stream, StreamExt};
 use std::{
     fmt::{Debug, Display},
     io::BufWriter,
@@ -47,7 +47,7 @@ where
         out_path: impl AsRef<Path> + Debug,
         crawlers_buffer_size: usize,
         spiders_buffer_size: usize,
-    ) -> Result<(), CrawlerError> {
+    ) -> Result<usize, CrawlerError> {
         let out_path = out_path.as_ref().to_path_buf();
         if !out_path.exists() {
             create_dir(&out_path)
@@ -58,28 +58,34 @@ where
         }
         let date = get_peru_date();
 
-        stream::iter(self.spiders.into_iter())
+        let n = stream::iter(self.spiders.into_iter())
             .map(|spider| process_one(out_path.clone(), spider, date.clone(), spiders_buffer_size))
             .buffer_unordered(crawlers_buffer_size)
-            .for_each(|res| {
-                if let Err(e) = res {
-                    tracing::error!(error.cause_chain = ?e, error.message = %e, "Failed to process spider");
+            .filter_map(|res| async {
+                match res {
+                    Err(e) => {
+                        tracing::error!(error.cause_chain = ?e, error.message = %e, "Failed to process spider");
+                        None
+                    }
+                    Ok(n) => Some(n),
                 }
-                future::ready(())
-            }).await;
+            })
+            .collect::<Vec<_>>()
+            .await.iter().sum();
 
-        Ok(())
+        Ok(n)
     }
 }
 
 /// Process and save results on of a spider
+/// Returns the number of elements processed
 #[tracing::instrument(fields(spider=%spider))]
 async fn process_one<T>(
     out_path: PathBuf,
     spider: T,
     date: String,
     spiders_buffer_size: usize,
-) -> Result<(), CrawlerError>
+) -> Result<usize, CrawlerError>
 where
     T: Spider + Sync + Display,
 {
@@ -93,6 +99,7 @@ where
         .into_std()
         .await;
     let items = spider.scrape_all(spiders_buffer_size).await;
+    let n = items.len();
     spawn_blocking_with_tracing(move || {
         let mut wtr = csv::Writer::from_writer(BufWriter::new(file));
         items.into_iter().for_each(|item| {
@@ -101,6 +108,6 @@ where
     })
     .await
     .context("Failed to join task")?;
-    tracing::info!("Scraped in {:?}", now.elapsed());
-    Ok(())
+    tracing::info!("Scraped {} elements in {:?}", n, now.elapsed());
+    Ok(n)
 }

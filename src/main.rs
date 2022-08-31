@@ -22,13 +22,13 @@ async fn main() -> anyhow::Result<()> {
         InfiniteScrollingSpider::from_settings(configuration.wong, configuration.headless).await?,
     ];
     let crawler = Crawler::new(spiders);
-    crawler
+    let n = crawler
         .process_all(
             configuration.out_path,
             configuration.crawlers_buffer_size,
             configuration.spiders_buffer_size,
         )
         .await?;
-    tracing::info!("Finished in {:?}", now.elapsed());
+    tracing::info!("Finished in {:?} ({} items)", now.elapsed(), n);
     Ok(())
 }
