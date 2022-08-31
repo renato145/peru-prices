@@ -14,6 +14,7 @@ metro:
     - "cervezas-vinos-y-licores"
     - "limpieza"
     - "higiene-salud-y-belleza"
+    - "ninos-y-bebes"
 wong:
   subroutes:
     - "frutas-y-verduras"
@@ -29,3 +30,20 @@ wong:
     - "cervezas-vinos-y-licores"
     - "limpieza"
     - "higiene-salud-y-belleza"
+    - "ninos-y-bebes"
+plaza_vea:
+  subroutes:
+    - "frutas-y-verduras"
+    - "carnes-aves-y-pescados"
+    - "desayunos"
+    - "lacteos-y-huevos"
+    - "quesos-y-fiambres"
+    - "abarrotes"
+    - "panaderia-y-pasteleria"
+    - "pollo-rostizado-y-comidas-preparadas"
+    - "congelados"
+    - "bebidas"
+    - "limpieza"
+    - "cuidado-personal-y-salud"
+    - "bebe-e-infantil"
+    - "mercado-saludable"

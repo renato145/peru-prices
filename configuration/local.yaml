@@ -1,11 +1,15 @@
 out_path: "output_dev"
+infinite_scrolling:
+  scroll_checks: 2
 metro:
   subroutes:
     - "frutas-y-verduras"
     - "desayuno"
-  scroll_checks: 2
 wong:
   subroutes:
     - "frutas-y-verduras"
     - "desayuno"
-  scroll_checks: 2
+plaza_vea:
+  subroutes:
+    - "frutas-y-verduras"
+    - "carnes-aves-y-pescados"

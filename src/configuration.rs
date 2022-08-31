@@ -7,9 +7,17 @@ pub struct Settings {
     pub out_path: PathBuf,
     pub crawlers_buffer_size: usize,
     pub spiders_buffer_size: usize,
-    pub headless: bool,
+    pub infinite_scrolling: InfiniteScrollingGlobalSettings,
     pub metro: InfiniteScrollingSettings,
     pub wong: InfiniteScrollingSettings,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct InfiniteScrollingGlobalSettings {
+    pub headless: bool,
+    pub delay_milis: u64,
+    pub scroll_delay_milis: u64,
+    pub scroll_checks: usize,
 }
 
 #[derive(Debug, Deserialize)]
@@ -18,9 +26,6 @@ pub struct InfiniteScrollingSettings {
     pub base_url: String,
     pub subroutes: Vec<String>,
     pub selector: String,
-    pub delay_milis: u64,
-    pub scroll_delay_milis: u64,
-    pub scroll_checks: usize,
 }
 
 pub fn get_configuration() -> Result<Settings, config::ConfigError> {

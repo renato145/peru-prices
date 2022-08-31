@@ -18,8 +18,16 @@ async fn main() -> anyhow::Result<()> {
     let now = Instant::now();
 
     let spiders = vec![
-        InfiniteScrollingSpider::from_settings(configuration.metro, configuration.headless).await?,
-        InfiniteScrollingSpider::from_settings(configuration.wong, configuration.headless).await?,
+        InfiniteScrollingSpider::from_settings(
+            configuration.metro,
+            &configuration.infinite_scrolling,
+        )
+        .await?,
+        InfiniteScrollingSpider::from_settings(
+            configuration.wong,
+            &configuration.infinite_scrolling,
+        )
+        .await?,
     ];
     let crawler = Crawler::new(spiders);
     let n = crawler

@@ -1,5 +1,5 @@
 use super::{Spider, SpiderError};
-use crate::configuration::InfiniteScrollingSettings;
+use crate::configuration::{InfiniteScrollingGlobalSettings, InfiniteScrollingSettings};
 use anyhow::{anyhow, Context};
 use async_trait::async_trait;
 use fantoccini::{Client, ClientBuilder, Locator};
@@ -81,17 +81,17 @@ impl InfiniteScrollingSpider {
 
     pub async fn from_settings(
         settings: InfiniteScrollingSettings,
-        headless: bool,
+        global_settings: &InfiniteScrollingGlobalSettings,
     ) -> Result<Self, SpiderError> {
         Self::new(
             settings.name,
             settings.base_url,
             settings.subroutes,
             &settings.selector,
-            settings.delay_milis,
-            settings.scroll_delay_milis,
-            settings.scroll_checks,
-            headless,
+            global_settings.delay_milis,
+            global_settings.scroll_delay_milis,
+            global_settings.scroll_checks,
+            global_settings.headless,
         )
         .await
     }

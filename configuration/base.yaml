@@ -1,17 +1,19 @@
-crawlers_buffer_size: 2
+crawlers_buffer_size: 5
 spiders_buffer_size: 3
-headless: true
+infinite_scrolling:
+  headless: true
+  delay_milis: 500
+  scroll_delay_milis: 250
+  scroll_checks: 20
 metro:
   name: "metro"
   base_url: "https://www.metro.pe"
   selector: ".product-item"
-  delay_milis: 500
-  scroll_delay_milis: 250
-  scroll_checks: 20
 wong:
   name: "wong"
   base_url: "https://www.wong.pe"
   selector: ".product-item"
-  delay_milis: 500
-  scroll_delay_milis: 250
-  scroll_checks: 20
+plaza_vea:
+  name: "plaza_vea"
+  base_url: "https://www.plazavea.com.pe"
+  selector: ".product-item"
