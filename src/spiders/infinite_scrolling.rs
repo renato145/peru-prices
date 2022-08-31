@@ -17,6 +17,7 @@ pub struct InfiniteScrollingSpider {
     name: String,
     base_url: String,
     subroutes: Vec<String>,
+    css_locator: String,
     selector: Selector,
     /// Mutex is used to lock multiple access to the webdriver
     client: Mutex<Client>,
@@ -45,15 +46,15 @@ impl InfiniteScrollingSpider {
         name: impl ToString,
         base_url: impl ToString,
         subroutes: Vec<impl ToString>,
-        selector: &str,
+        css_selector: &str,
         delay_milis: u64,
         scroll_delay_milis: u64,
         scroll_checks: usize,
         headless: bool,
     ) -> Result<Self, SpiderError> {
         let subroutes = subroutes.into_iter().map(|x| x.to_string()).collect();
-        let selector = Selector::parse(selector)
-            .map_err(|_| SpiderError::InvalidSelector(selector.to_string()))?;
+        let selector = Selector::parse(css_selector)
+            .map_err(|_| SpiderError::InvalidSelector(css_selector.to_string()))?;
 
         let mut client = ClientBuilder::rustls();
         if headless {
@@ -71,6 +72,7 @@ impl InfiniteScrollingSpider {
             name: name.to_string(),
             base_url: base_url.to_string(),
             subroutes,
+            css_locator: css_selector.to_string(),
             selector,
             client: Mutex::new(client),
             delay: Duration::from_millis(delay_milis),
@@ -237,7 +239,7 @@ impl Spider for InfiniteScrollingSpider {
             client
                 .wait()
                 .at_most(Duration::from_secs(5))
-                .for_element(Locator::Css(".product-item"))
+                .for_element(Locator::Css(&self.css_locator))
                 .await
                 .context("Failed to wait for element")?;
             if let Err(e) = self.scroll_to_end(&client).await {

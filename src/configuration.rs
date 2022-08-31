@@ -10,6 +10,7 @@ pub struct Settings {
     pub infinite_scrolling: InfiniteScrollingGlobalSettings,
     pub metro: InfiniteScrollingSettings,
     pub wong: InfiniteScrollingSettings,
+    pub plaza_vea: InfiniteScrollingSettings,
 }
 
 #[derive(Debug, Deserialize)]
