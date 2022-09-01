@@ -1,5 +1,7 @@
 mod infinite_scrolling;
+mod multipage;
 pub use infinite_scrolling::*;
+pub use multipage::*;
 
 use crate::error_chain_fmt;
 use async_trait::async_trait;
