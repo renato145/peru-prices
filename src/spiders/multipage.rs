@@ -1,13 +1,18 @@
 use super::{Spider, SpiderError};
 use crate::configuration::MultipageSpiderSettings;
+use anyhow::Context;
 use async_trait::async_trait;
 use reqwest::Client;
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use reqwest_tracing::TracingMiddleware;
-use scraper::Selector;
+use scraper::{Html, Selector};
 use serde::Serialize;
-use std::{fmt, time::Duration};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt,
+    time::Duration,
+};
 
 pub struct MultipageSpider {
     name: String,
@@ -93,6 +98,32 @@ impl Spider for MultipageSpider {
 
     #[tracing::instrument(skip(self))]
     async fn scrape(&self, url: &str) -> Result<Vec<Self::Item>, SpiderError> {
-        todo!()
+        let document = self
+            .client
+            .get(url)
+            .send()
+            .await
+            .context("Failed to send request")?
+            .text()
+            .await
+            .context("Failed to read document")?;
+        let html = Html::parse_document(&document);
+        let elements = html
+            .select(&self.selector)
+            .filter_map(|element| {
+                let map = element.value().attrs().collect::<HashMap<_, _>>();
+                match MultipageItem::try_from(map) {
+                    Ok(item) => Some(item),
+                    Err(e) => {
+                        tracing::error!(error.cause_chain = ?e, error.message = %e, "Error reading item");
+                        None
+                    }
+                }
+            })
+            .collect::<HashSet<_>>()
+            .into_iter()
+            .collect::<Vec<_>>();
+        tracing::info!("Found {} elements", elements.len());
+        Ok(elements)
     }
 }
