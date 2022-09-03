@@ -5,7 +5,6 @@ use std::path::PathBuf;
 #[derive(Debug, Deserialize)]
 pub struct Settings {
     pub out_path: PathBuf,
-    pub crawlers_buffer_size: usize,
     pub spiders_buffer_size: usize,
     pub infinite_scrolling: InfiniteScrollingSettings,
     pub metro: InfiniteScrollingSpiderSettings,

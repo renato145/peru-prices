@@ -40,7 +40,7 @@ where
         Self {
             spider,
             path: configuration.out_path.clone(),
-            buffer_size: configuration.crawlers_buffer_size,
+            buffer_size: configuration.spiders_buffer_size,
         }
     }
 

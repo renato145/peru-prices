@@ -76,6 +76,15 @@ impl MultipageSpider {
 #[derive(Debug, Serialize, PartialEq, Eq, Hash)]
 pub struct MultipageItem {}
 
+impl TryFrom<HashMap<&str, &str>> for MultipageItem {
+    type Error = SpiderError;
+
+    fn try_from(map: HashMap<&str, &str>) -> Result<Self, Self::Error> {
+        tracing::debug!("Received data: {:?}", map);
+        todo!()
+    }
+}
+
 #[async_trait]
 impl Spider for MultipageSpider {
     type Item = MultipageItem;
