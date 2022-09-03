@@ -1,5 +1,8 @@
+use futures::future::join_all;
 use peru_prices::{
-    configuration::get_configuration, crawler::Crawler, spiders::InfiniteScrollingSpider,
+    configuration::get_configuration,
+    crawler::Crawler,
+    spiders::{InfiniteScrollingSpider, MultipageSpider},
 };
 use tokio::time::Instant;
 use tracing_subscriber::{
@@ -21,31 +24,33 @@ async fn main() -> anyhow::Result<()> {
     tracing::debug!("{:#?}", configuration);
     let now = Instant::now();
 
-    let spiders = vec![
-        InfiniteScrollingSpider::from_settings(
-            configuration.metro,
-            &configuration.infinite_scrolling,
-        )
-        .await?,
-        InfiniteScrollingSpider::from_settings(
-            configuration.wong,
-            &configuration.infinite_scrolling,
-        )
-        .await?,
-        // InfiniteScrollingSpider::from_settings(
-        //     configuration.plaza_vea,
-        //     &configuration.infinite_scrolling,
-        // )
-        // .await?,
+    let metro_spider = InfiniteScrollingSpider::from_settings(
+        &configuration.metro,
+        &configuration.infinite_scrolling,
+    )
+    .await?;
+    let wong_spider = InfiniteScrollingSpider::from_settings(
+        &configuration.wong,
+        &configuration.infinite_scrolling,
+    )
+    .await?;
+    let plaza_vea_spider = MultipageSpider::from_settings(&configuration.plaza_vea)?;
+
+    let tasks = vec![
+        // tokio::spawn(Crawler::new(metro_spider, &configuration).process()),
+        // tokio::spawn(Crawler::new(wong_spider, &configuration).process()),
+        tokio::spawn(Crawler::new(plaza_vea_spider, &configuration).process()),
     ];
-    let crawler = Crawler::new(spiders);
-    let n = crawler
-        .process_all(
-            configuration.out_path,
-            configuration.crawlers_buffer_size,
-            configuration.spiders_buffer_size,
-        )
-        .await?;
+
+    let n: usize = join_all(tasks).await.into_iter().map(|res| match res {
+        Ok(Ok(n)) => n,
+        Err(e) => {
+            tracing::error!(error.cause_chain = ?e, error.message = %e, "Failed to execute task");
+            0
+        }
+        _ => 0,
+    }).sum();
+
     tracing::info!("Finished in {:?} ({} items)", now.elapsed(), n);
     Ok(())
 }

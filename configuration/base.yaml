@@ -17,3 +17,5 @@ plaza_vea:
   name: "plaza_vea"
   base_url: "https://www.plazavea.com.pe"
   selector: ".product-item"
+  delay_milis: 500
+  next_page_selector: "notsetted"

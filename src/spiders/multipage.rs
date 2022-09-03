@@ -57,11 +57,11 @@ impl MultipageSpider {
         })
     }
 
-    pub fn from_settings(settings: MultipageSpiderSettings) -> Result<Self, SpiderError> {
+    pub fn from_settings(settings: &MultipageSpiderSettings) -> Result<Self, SpiderError> {
         Self::new(
-            settings.name,
-            settings.base_url,
-            settings.subroutes,
+            settings.name.clone(),
+            settings.base_url.clone(),
+            settings.subroutes.clone(),
             &settings.selector,
             settings.delay_milis,
         )
@@ -76,19 +76,19 @@ impl Spider for MultipageSpider {
     type Item = MultipageItem;
 
     fn name(&self) -> &str {
-        todo!()
+        &self.name
     }
 
     fn base_url(&self) -> &str {
-        todo!()
+        &self.base_url
     }
 
     fn subroutes(&self) -> &[String] {
-        todo!()
+        self.subroutes.as_slice()
     }
 
     fn delay(&self) -> std::time::Duration {
-        todo!()
+        self.delay
     }
 
     #[tracing::instrument(skip(self))]

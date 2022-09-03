@@ -82,13 +82,13 @@ impl InfiniteScrollingSpider {
     }
 
     pub async fn from_settings(
-        settings: InfiniteScrollingSpiderSettings,
+        settings: &InfiniteScrollingSpiderSettings,
         global_settings: &InfiniteScrollingSettings,
     ) -> Result<Self, SpiderError> {
         Self::new(
-            settings.name,
-            settings.base_url,
-            settings.subroutes,
+            settings.name.clone(),
+            settings.base_url.clone(),
+            settings.subroutes.clone(),
             &settings.selector,
             global_settings.delay_milis,
             global_settings.scroll_delay_milis,
