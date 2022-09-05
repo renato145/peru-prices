@@ -1,5 +1,8 @@
 mod infinite_scrolling;
+mod multipage;
+use anyhow::Context;
 pub use infinite_scrolling::*;
+pub use multipage::*;
 
 use crate::error_chain_fmt;
 use async_trait::async_trait;
@@ -53,7 +56,7 @@ pub trait Spider {
                     Err(e) => {
                         tracing::error!(error.cause_chain = ?e,
                                         error.message = %e,
-                                        "Failed to scrape subroute");
+                                        "Failed to scrape subroute.");
                         None
                     }
                 }
@@ -66,4 +69,15 @@ pub trait Spider {
             .into_iter()
             .collect()
     }
+}
+
+pub fn parse_price(x: &str) -> Result<f64, SpiderError> {
+    let price = x
+        .replace("S/.", "")
+        .replace("S/", "")
+        .replace(',', "")
+        .trim()
+        .parse::<f64>()
+        .with_context(|| format!("Failed to parse price from: {:?}", x))?;
+    Ok(price)
 }

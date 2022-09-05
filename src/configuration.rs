@@ -5,24 +5,31 @@ use std::path::PathBuf;
 #[derive(Debug, Deserialize)]
 pub struct Settings {
     pub out_path: PathBuf,
-    pub crawlers_buffer_size: usize,
+    pub headless: bool,
+    pub delay_milis: u64,
     pub spiders_buffer_size: usize,
-    pub infinite_scrolling: InfiniteScrollingGlobalSettings,
-    pub metro: InfiniteScrollingSettings,
-    pub wong: InfiniteScrollingSettings,
-    pub plaza_vea: InfiniteScrollingSettings,
+    pub infinite_scrolling: InfiniteScrollingSettings,
+    pub metro: InfiniteScrollingSpiderSettings,
+    pub wong: InfiniteScrollingSpiderSettings,
+    pub plaza_vea: MultipageSpiderSettings,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct InfiniteScrollingGlobalSettings {
-    pub headless: bool,
-    pub delay_milis: u64,
+pub struct InfiniteScrollingSettings {
     pub scroll_delay_milis: u64,
     pub scroll_checks: usize,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct InfiniteScrollingSettings {
+pub struct InfiniteScrollingSpiderSettings {
+    pub name: String,
+    pub base_url: String,
+    pub subroutes: Vec<String>,
+    pub selector: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct MultipageSpiderSettings {
     pub name: String,
     pub base_url: String,
     pub subroutes: Vec<String>,

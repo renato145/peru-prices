@@ -1,5 +1,8 @@
 use super::{Spider, SpiderError};
-use crate::configuration::{InfiniteScrollingGlobalSettings, InfiniteScrollingSettings};
+use crate::{
+    configuration::{InfiniteScrollingSpiderSettings, Settings},
+    spiders::parse_price,
+};
 use anyhow::{anyhow, Context};
 use async_trait::async_trait;
 use fantoccini::{Client, ClientBuilder, Locator};
@@ -82,18 +85,18 @@ impl InfiniteScrollingSpider {
     }
 
     pub async fn from_settings(
-        settings: InfiniteScrollingSettings,
-        global_settings: &InfiniteScrollingGlobalSettings,
+        settings: &Settings,
+        spider_settings: &InfiniteScrollingSpiderSettings,
     ) -> Result<Self, SpiderError> {
         Self::new(
-            settings.name,
-            settings.base_url,
-            settings.subroutes,
-            &settings.selector,
-            global_settings.delay_milis,
-            global_settings.scroll_delay_milis,
-            global_settings.scroll_checks,
-            global_settings.headless,
+            spider_settings.name.clone(),
+            spider_settings.base_url.clone(),
+            spider_settings.subroutes.clone(),
+            &spider_settings.selector,
+            settings.delay_milis,
+            settings.infinite_scrolling.scroll_delay_milis,
+            settings.infinite_scrolling.scroll_checks,
+            settings.headless,
         )
         .await
     }
@@ -171,8 +174,9 @@ impl Hash for InfiniteScrollingItem {
 impl TryFrom<HashMap<&str, &str>> for InfiniteScrollingItem {
     type Error = SpiderError;
 
+    #[tracing::instrument(err(Debug))]
     fn try_from(mut map: HashMap<&str, &str>) -> Result<Self, Self::Error> {
-        tracing::debug!("Received data: {:?}", map);
+        tracing::debug!("Received data: {:#?}", map);
         let id = map
             .remove("data-id")
             .map(String::from)
@@ -180,16 +184,7 @@ impl TryFrom<HashMap<&str, &str>> for InfiniteScrollingItem {
         let brand = map.remove("data-brand").map(String::from);
         let uri = map.remove("data-uri").map(String::from);
         let name = map.remove("data-name").map(String::from);
-        let price = map
-            .remove("data-price")
-            .map(|x| {
-                x.replace("S/.", "")
-                    .replace(',', "")
-                    .trim()
-                    .parse()
-                    .with_context(|| format!("Failed to parse price from: {:?}", x))
-            })
-            .transpose()?;
+        let price = map.remove("data-price").map(parse_price).transpose()?;
         let category = map.remove("data-category").map(String::from);
         if brand.is_none()
             && uri.is_none()
@@ -243,7 +238,7 @@ impl Spider for InfiniteScrollingSpider {
                 .await
                 .context("Failed to wait for element")?;
             if let Err(e) = self.scroll_to_end(&client).await {
-                tracing::error!(error.cause_chain = ?e, error.message = %e, "Failed to scroll to end");
+                tracing::error!(error.cause_chain = ?e, error.message = %e, "Failed to scroll to end.");
             }
             client
                 .source()
@@ -255,13 +250,7 @@ impl Spider for InfiniteScrollingSpider {
             .select(&self.selector)
             .filter_map(|element| {
                 let map = element.value().attrs().collect::<HashMap<_, _>>();
-                match InfiniteScrollingItem::try_from(map) {
-                    Ok(item) => Some(item),
-                    Err(e) => {
-                        tracing::error!(error.cause_chain = ?e, error.message = %e, "Error reading item");
-                        None
-                    }
-                }
+                InfiniteScrollingItem::try_from(map).ok()
             })
             .collect::<HashSet<_>>()
             .into_iter()
