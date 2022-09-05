@@ -5,6 +5,7 @@ use std::path::PathBuf;
 #[derive(Debug, Deserialize)]
 pub struct Settings {
     pub out_path: PathBuf,
+    pub headless: bool,
     pub spiders_buffer_size: usize,
     pub infinite_scrolling: InfiniteScrollingSettings,
     pub metro: InfiniteScrollingSpiderSettings,
@@ -14,7 +15,6 @@ pub struct Settings {
 
 #[derive(Debug, Deserialize)]
 pub struct InfiniteScrollingSettings {
-    pub headless: bool,
     pub delay_milis: u64,
     pub scroll_delay_milis: u64,
     pub scroll_checks: usize,
@@ -35,7 +35,6 @@ pub struct MultipageSpiderSettings {
     pub subroutes: Vec<String>,
     pub selector: String,
     pub delay_milis: u64,
-    pub next_page_selector: String,
 }
 
 pub fn get_configuration() -> Result<Settings, config::ConfigError> {

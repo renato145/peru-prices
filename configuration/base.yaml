@@ -1,6 +1,6 @@
+headless: true
 spiders_buffer_size: 3
 infinite_scrolling:
-  headless: true
   delay_milis: 500
   scroll_delay_milis: 250
   scroll_checks: 20
@@ -17,4 +17,3 @@ plaza_vea:
   base_url: "https://www.plazavea.com.pe"
   selector: ".Showcase"
   delay_milis: 500
-  next_page_selector: "notsetted"
