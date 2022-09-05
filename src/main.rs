@@ -24,21 +24,16 @@ async fn main() -> anyhow::Result<()> {
     tracing::debug!("{:#?}", configuration);
     let now = Instant::now();
 
-    // let metro_spider = InfiniteScrollingSpider::from_settings(
-    //     &configuration.metro,
-    //     &configuration.infinite_scrolling,
-    // )
-    // .await?;
-    // let wong_spider = InfiniteScrollingSpider::from_settings(
-    //     &configuration.wong,
-    //     &configuration.infinite_scrolling,
-    // )
-    // .await?;
-    let plaza_vea_spider = MultipageSpider::from_settings(&configuration.plaza_vea).await?;
+    let metro_spider =
+        InfiniteScrollingSpider::from_settings(&configuration, &configuration.metro).await?;
+    let wong_spider =
+        InfiniteScrollingSpider::from_settings(&configuration, &configuration.wong).await?;
+    let plaza_vea_spider =
+        MultipageSpider::from_settings(&configuration, &configuration.plaza_vea).await?;
 
     let tasks = vec![
-        // tokio::spawn(Crawler::new(metro_spider, &configuration).process()),
-        // tokio::spawn(Crawler::new(wong_spider, &configuration).process()),
+        tokio::spawn(Crawler::new(metro_spider, &configuration).process()),
+        tokio::spawn(Crawler::new(wong_spider, &configuration).process()),
         tokio::spawn(Crawler::new(plaza_vea_spider, &configuration).process()),
     ];
 

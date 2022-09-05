@@ -14,7 +14,7 @@ use std::{
     hash::Hash,
     time::Duration,
 };
-use tokio::sync::Mutex;
+use tokio::{sync::Mutex, time::sleep};
 
 pub struct MultipageSpider {
     name: String,
@@ -84,10 +84,66 @@ impl MultipageSpider {
             spider_settings.base_url.clone(),
             spider_settings.subroutes.clone(),
             &spider_settings.selector,
-            spider_settings.delay_milis,
+            settings.delay_milis,
             settings.headless,
         )
         .await
+    }
+
+    #[tracing::instrument(skip(self))]
+    async fn scrape_page(&self, url: &str, page: usize) -> Result<Vec<MultipageItem>, SpiderError> {
+        let document = {
+            let client = self.client.lock().await;
+            client
+                .goto(&format!("{}?page={}", url, page))
+                .await
+                .context("Failed to go to url")?;
+            let _ = client
+                .wait()
+                .at_most(Duration::from_secs(5))
+                .for_element(Locator::Css(&self.css_locator))
+                .await;
+            sleep(self.delay).await;
+            client
+                .source()
+                .await
+                .context("Failed to obtain html content")?
+        };
+        let html = Html::parse_document(&document);
+        if html
+            .select(&Selector::parse(".vitrine__products__comingSoon").unwrap())
+            .next()
+            .is_some()
+        {
+            return Ok(Vec::new());
+        }
+        let elements = html
+            .select(&self.selector)
+            .filter_map(|element| {
+                let mut map = element
+                    .value()
+                    .attrs()
+                    .map(|(k, v)| (k.to_string(), v.to_string()))
+                    .collect::<HashMap<_, _>>();
+                map.insert("category".to_string(), url.to_string());
+                add_to_map(
+                    &mut map,
+                    element,
+                    &[
+                        (".Showcase__content", false, &["title"]),
+                        (".Showcase__brand a", false, &[]),
+                        (".Showcase__priceBox__title", true, &[]),
+                        (".Showcase__link", false, &["href"]),
+                        (".Showcase__salePrice", false, &["data-price"]),
+                    ],
+                );
+                MultipageItem::try_from(map).ok()
+            })
+            .collect::<HashSet<_>>()
+            .into_iter()
+            .collect::<Vec<_>>();
+        tracing::info!("Found {} elements", elements.len());
+        Ok(elements)
     }
 }
 
@@ -174,46 +230,17 @@ impl Spider for MultipageSpider {
 
     #[tracing::instrument(skip(self))]
     async fn scrape(&self, url: &str) -> Result<Vec<Self::Item>, SpiderError> {
-        let document = {
-            let client = self.client.lock().await;
-            client.goto(url).await.context("Failed to go to url")?;
-            client
-                .wait()
-                .at_most(Duration::from_secs(5))
-                .for_element(Locator::Css(&self.css_locator))
-                .await
-                .context("Failed to wait for element")?;
-            client
-                .source()
-                .await
-                .context("Failed to obtain html content")?
-        };
-        let html = Html::parse_document(&document);
-        let elements = html
-            .select(&self.selector)
-            .filter_map(|element| {
-                let mut map = element
-                    .value()
-                    .attrs()
-                    .map(|(k, v)| (k.to_string(), v.to_string()))
-                    .collect::<HashMap<_, _>>();
-                map.insert("category".to_string(), url.to_string());
-                add_to_map(
-                    &mut map,
-                    element,
-                    &[
-                        (".Showcase__content", false, &["title"]),
-                        (".Showcase__brand a", false, &[]),
-                        (".Showcase__priceBox__title", true, &[]),
-                        (".Showcase__link", false, &["href"]),
-                        (".Showcase__salePrice", false, &["data-price"]),
-                    ],
-                );
-                MultipageItem::try_from(map).ok()
-            })
-            .collect::<HashSet<_>>()
-            .into_iter()
-            .collect::<Vec<_>>();
+        let mut elements = Vec::new();
+        let mut page = 1;
+        loop {
+            let mut res = self.scrape_page(url, page).await?;
+            if res.is_empty() {
+                break;
+            } else {
+                elements.append(&mut res);
+                page += 1;
+            }
+        }
         tracing::info!("Found {} elements", elements.len());
         Ok(elements)
     }

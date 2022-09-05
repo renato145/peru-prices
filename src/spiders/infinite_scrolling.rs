@@ -93,7 +93,7 @@ impl InfiniteScrollingSpider {
             spider_settings.base_url.clone(),
             spider_settings.subroutes.clone(),
             &spider_settings.selector,
-            settings.infinite_scrolling.delay_milis,
+            settings.delay_milis,
             settings.infinite_scrolling.scroll_delay_milis,
             settings.infinite_scrolling.scroll_checks,
             settings.headless,

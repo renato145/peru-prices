@@ -12,4 +12,4 @@ wong:
 plaza_vea:
   subroutes:
     - "frutas-y-verduras"
-    # - "carnes-aves-y-pescados"
+    - "carnes-aves-y-pescados"
