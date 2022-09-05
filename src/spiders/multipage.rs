@@ -1,11 +1,11 @@
 use super::{Spider, SpiderError};
-use crate::{configuration::MultipageSpiderSettings, spiders::parse_price};
+use crate::{
+    configuration::{MultipageSpiderSettings, Settings},
+    spiders::parse_price,
+};
 use anyhow::Context;
 use async_trait::async_trait;
-use reqwest::{header::USER_AGENT, Client};
-use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
-use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
-use reqwest_tracing::TracingMiddleware;
+use fantoccini::{Client, ClientBuilder, Locator};
 use scraper::{ElementRef, Html, Selector};
 use serde::Serialize;
 use std::{
@@ -14,13 +14,16 @@ use std::{
     hash::Hash,
     time::Duration,
 };
+use tokio::sync::Mutex;
 
 pub struct MultipageSpider {
     name: String,
     base_url: String,
     subroutes: Vec<String>,
+    css_locator: String,
     selector: Selector,
-    client: ClientWithMiddleware,
+    /// Mutex is used to lock multiple access to the webdriver
+    client: Mutex<Client>,
     delay: Duration,
 }
 
@@ -37,40 +40,54 @@ impl fmt::Display for MultipageSpider {
 }
 
 impl MultipageSpider {
-    pub fn new(
+    pub async fn new(
         name: impl ToString,
         base_url: impl ToString,
         subroutes: Vec<impl ToString>,
         css_selector: &str,
         delay_milis: u64,
+        headless: bool,
     ) -> Result<Self, SpiderError> {
         let subroutes = subroutes.into_iter().map(|x| x.to_string()).collect();
         let selector = Selector::parse(css_selector)
             .map_err(|_| SpiderError::InvalidSelector(css_selector.to_string()))?;
-        let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
-        let client = ClientBuilder::new(Client::new())
-            .with(TracingMiddleware::default())
-            .with(RetryTransientMiddleware::new_with_policy(retry_policy))
-            .build();
+        let mut client = ClientBuilder::rustls();
+        if headless {
+            let mut caps = serde_json::map::Map::new();
+            let chrome_opts = serde_json::json!({ "args": ["--headless", "--disable-gpu"] });
+            caps.insert("goog:chromeOptions".to_string(), chrome_opts);
+            client.capabilities(caps);
+        }
+
+        let client = client
+            .connect("http://localhost:4444")
+            .await
+            .context("Error connecting to webdriver")?;
 
         Ok(Self {
             name: name.to_string(),
             base_url: base_url.to_string(),
             subroutes,
+            css_locator: css_selector.to_string(),
             selector,
-            client,
+            client: Mutex::new(client),
             delay: Duration::from_millis(delay_milis),
         })
     }
 
-    pub fn from_settings(settings: &MultipageSpiderSettings) -> Result<Self, SpiderError> {
+    pub async fn from_settings(
+        settings: &Settings,
+        spider_settings: &MultipageSpiderSettings,
+    ) -> Result<Self, SpiderError> {
         Self::new(
-            settings.name.clone(),
-            settings.base_url.clone(),
-            settings.subroutes.clone(),
-            &settings.selector,
-            settings.delay_milis,
+            spider_settings.name.clone(),
+            spider_settings.base_url.clone(),
+            spider_settings.subroutes.clone(),
+            &spider_settings.selector,
+            spider_settings.delay_milis,
+            settings.headless,
         )
+        .await
     }
 }
 
@@ -79,9 +96,7 @@ pub struct MultipageItem {
     pub sku: String,
     pub name: Option<String>,
     pub brand: Option<String>,
-    pub department: Option<String>,
     pub category: Option<String>,
-    pub price_box: Option<String>,
     pub uri: Option<String>,
     pub price: Option<f64>,
 }
@@ -105,24 +120,21 @@ impl Hash for MultipageItem {
 impl TryFrom<HashMap<String, String>> for MultipageItem {
     type Error = SpiderError;
 
+    #[tracing::instrument(err(Debug))]
     fn try_from(mut map: HashMap<String, String>) -> Result<Self, Self::Error> {
-        tracing::debug!("Received data: {:#?}", map);
         let sku = map.remove("data-sku").context("Failed to obtain item id")?;
         let name = map.remove("title");
         let brand = map.remove(".Showcase__brand a");
-        let department = map.remove("data-dep");
-        let category = map.remove("data-cat");
-        let price_box = map.remove(".Showcase__priceBox__title");
+        let category = map.remove("category");
         let uri = map.remove("href");
         let price = map
-            .get(".Showcase__salePrice")
+            .get("data-price")
+            .or_else(|| map.get(".Showcase__salePrice"))
             .map(|x| parse_price(x.as_str()))
             .transpose()?;
         if name.is_none()
             && brand.is_none()
-            && department.is_none()
             && category.is_none()
-            && price_box.is_none()
             && uri.is_none()
             && price.is_none()
         {
@@ -132,9 +144,7 @@ impl TryFrom<HashMap<String, String>> for MultipageItem {
                 sku,
                 name,
                 brand,
-                department,
                 category,
-                price_box,
                 uri,
                 price,
             })
@@ -164,19 +174,20 @@ impl Spider for MultipageSpider {
 
     #[tracing::instrument(skip(self))]
     async fn scrape(&self, url: &str) -> Result<Vec<Self::Item>, SpiderError> {
-        let document = self
-            .client
-            .get(url)
-            .header(
-                USER_AGENT,
-                "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:47.0) Gecko/20100101 Firefox/47.0",
-            )
-            .send()
-            .await
-            .context("Failed to send request")?
-            .text()
-            .await
-            .context("Failed to read document")?;
+        let document = {
+            let client = self.client.lock().await;
+            client.goto(url).await.context("Failed to go to url")?;
+            client
+                .wait()
+                .at_most(Duration::from_secs(5))
+                .for_element(Locator::Css(&self.css_locator))
+                .await
+                .context("Failed to wait for element")?;
+            client
+                .source()
+                .await
+                .context("Failed to obtain html content")?
+        };
         let html = Html::parse_document(&document);
         let elements = html
             .select(&self.selector)
@@ -186,6 +197,7 @@ impl Spider for MultipageSpider {
                     .attrs()
                     .map(|(k, v)| (k.to_string(), v.to_string()))
                     .collect::<HashMap<_, _>>();
+                map.insert("category".to_string(), url.to_string());
                 add_to_map(
                     &mut map,
                     element,
@@ -194,16 +206,10 @@ impl Spider for MultipageSpider {
                         (".Showcase__brand a", false, &[]),
                         (".Showcase__priceBox__title", true, &[]),
                         (".Showcase__link", false, &["href"]),
-                        (".Showcase__salePrice", false, &[]),
+                        (".Showcase__salePrice", false, &["data-price"]),
                     ],
                 );
-                match MultipageItem::try_from(map) {
-                    Ok(item) => Some(item),
-                    Err(e) => {
-                        tracing::error!(error.cause_chain = ?e, error.message = %e, "Error reading item");
-                        None
-                    }
-                }
+                MultipageItem::try_from(map).ok()
             })
             .collect::<HashSet<_>>()
             .into_iter()
@@ -224,17 +230,24 @@ fn add_to_map(
         .iter()
         .for_each(|&(class, extract_all_text, values_to_extract)| {
             let selector = Selector::parse(class).unwrap();
-            let child = element.select(&selector).next().unwrap();
-            let child_map = child.value().attrs().collect::<HashMap<_, _>>();
-            let text = if extract_all_text {
-                child.text().collect::<String>().trim().to_string()
-            } else {
-                child.text().next().unwrap_or("").trim().to_string()
-            };
-            map.insert(class.to_string(), text);
-            values_to_extract.iter().for_each(|k| {
-                let v = child_map.get(k).unwrap_or(&"").to_string();
-                map.insert(k.to_string(), v);
-            });
+            match element.select(&selector).next() {
+                Some(child) => {
+                    let child_map = child.value().attrs().collect::<HashMap<_, _>>();
+                    let text = if extract_all_text {
+                        child.text().collect::<String>().trim().to_string()
+                    } else {
+                        child.text().next().unwrap_or("").trim().to_string()
+                    };
+                    map.insert(class.to_string(), text);
+                    values_to_extract.iter().for_each(|k| {
+                        if let Some(v) = child_map.get(k) {
+                            map.insert(k.to_string(), v.to_string());
+                        }
+                    });
+                }
+                None => {
+                    tracing::warn!(class, map = ?map, "Failed to get element.");
+                }
+            }
         });
 }

@@ -56,7 +56,7 @@ pub trait Spider {
                     Err(e) => {
                         tracing::error!(error.cause_chain = ?e,
                                         error.message = %e,
-                                        "Failed to scrape subroute");
+                                        "Failed to scrape subroute.");
                         None
                     }
                 }

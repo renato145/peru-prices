@@ -57,7 +57,7 @@ where
         let date = get_peru_date();
         let n = match process_spider(self.path, self.spider, date, self.buffer_size).await {
             Err(e) => {
-                tracing::error!(error.cause_chain = ?e, error.message = %e, "Failed to process spider");
+                tracing::error!(error.cause_chain = ?e, error.message = %e, "Failed to process spider.");
                 0
             }
             Ok(n) => n,
