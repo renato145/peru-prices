@@ -231,12 +231,11 @@ impl Spider for InfiniteScrollingSpider {
         let document = {
             let client = self.client.lock().await;
             client.goto(url).await.context("Failed to go to url")?;
-            client
+            let _ = client
                 .wait()
                 .at_most(Duration::from_secs(5))
                 .for_element(Locator::Css(&self.css_locator))
-                .await
-                .context("Failed to wait for element")?;
+                .await;
             if let Err(e) = self.scroll_to_end(&client).await {
                 tracing::error!(error.cause_chain = ?e, error.message = %e, "Failed to scroll to end.");
             }
