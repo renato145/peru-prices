@@ -24,17 +24,17 @@ async fn main() -> anyhow::Result<()> {
     tracing::debug!("{:#?}", configuration);
     let now = Instant::now();
 
-    let metro_spider = InfiniteScrollingSpider::from_settings(
-        &configuration.metro,
-        &configuration.infinite_scrolling,
-    )
-    .await?;
-    let wong_spider = InfiniteScrollingSpider::from_settings(
-        &configuration.wong,
-        &configuration.infinite_scrolling,
-    )
-    .await?;
-    let plaza_vea_spider = MultipageSpider::from_settings(&configuration.plaza_vea)?;
+    // let metro_spider = InfiniteScrollingSpider::from_settings(
+    //     &configuration.metro,
+    //     &configuration.infinite_scrolling,
+    // )
+    // .await?;
+    // let wong_spider = InfiniteScrollingSpider::from_settings(
+    //     &configuration.wong,
+    //     &configuration.infinite_scrolling,
+    // )
+    // .await?;
+    let plaza_vea_spider = MultipageSpider::from_settings(&configuration.plaza_vea).await?;
 
     let tasks = vec![
         // tokio::spawn(Crawler::new(metro_spider, &configuration).process()),
@@ -45,7 +45,7 @@ async fn main() -> anyhow::Result<()> {
     let n: usize = join_all(tasks).await.into_iter().map(|res| match res {
         Ok(Ok(n)) => n,
         Err(e) => {
-            tracing::error!(error.cause_chain = ?e, error.message = %e, "Failed to execute task");
+            tracing::error!(error.cause_chain = ?e, error.message = %e, "Failed to execute task.");
             0
         }
         _ => 0,
