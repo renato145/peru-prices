@@ -230,24 +230,19 @@ fn add_to_map(
         .iter()
         .for_each(|&(class, extract_all_text, values_to_extract)| {
             let selector = Selector::parse(class).unwrap();
-            match element.select(&selector).next() {
-                Some(child) => {
-                    let child_map = child.value().attrs().collect::<HashMap<_, _>>();
-                    let text = if extract_all_text {
-                        child.text().collect::<String>().trim().to_string()
-                    } else {
-                        child.text().next().unwrap_or("").trim().to_string()
-                    };
-                    map.insert(class.to_string(), text);
-                    values_to_extract.iter().for_each(|k| {
-                        if let Some(v) = child_map.get(k) {
-                            map.insert(k.to_string(), v.to_string());
-                        }
-                    });
-                }
-                None => {
-                    tracing::warn!(class, map = ?map, "Failed to get element.");
-                }
+            if let Some(child) = element.select(&selector).next() {
+                let child_map = child.value().attrs().collect::<HashMap<_, _>>();
+                let text = if extract_all_text {
+                    child.text().collect::<String>().trim().to_string()
+                } else {
+                    child.text().next().unwrap_or("").trim().to_string()
+                };
+                map.insert(class.to_string(), text);
+                values_to_extract.iter().for_each(|k| {
+                    if let Some(v) = child_map.get(k) {
+                        map.insert(k.to_string(), v.to_string());
+                    }
+                });
             }
         });
 }
