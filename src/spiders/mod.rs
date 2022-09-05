@@ -1,5 +1,6 @@
 mod infinite_scrolling;
 mod multipage;
+use anyhow::Context;
 pub use infinite_scrolling::*;
 pub use multipage::*;
 
@@ -68,4 +69,15 @@ pub trait Spider {
             .into_iter()
             .collect()
     }
+}
+
+pub fn parse_price(x: &str) -> Result<f64, SpiderError> {
+    let price = x
+        .replace("S/.", "")
+        .replace("S/", "")
+        .replace(',', "")
+        .trim()
+        .parse::<f64>()
+        .with_context(|| format!("Failed to parse price from: {:?}", x))?;
+    Ok(price)
 }

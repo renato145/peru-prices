@@ -1,5 +1,8 @@
 use super::{Spider, SpiderError};
-use crate::configuration::{InfiniteScrollingSettings, InfiniteScrollingSpiderSettings};
+use crate::{
+    configuration::{InfiniteScrollingSettings, InfiniteScrollingSpiderSettings},
+    spiders::parse_price,
+};
 use anyhow::{anyhow, Context};
 use async_trait::async_trait;
 use fantoccini::{Client, ClientBuilder, Locator};
@@ -172,7 +175,7 @@ impl TryFrom<HashMap<&str, &str>> for InfiniteScrollingItem {
     type Error = SpiderError;
 
     fn try_from(mut map: HashMap<&str, &str>) -> Result<Self, Self::Error> {
-        tracing::debug!("Received data: {:?}", map);
+        tracing::debug!("Received data: {:#?}", map);
         let id = map
             .remove("data-id")
             .map(String::from)
@@ -180,16 +183,7 @@ impl TryFrom<HashMap<&str, &str>> for InfiniteScrollingItem {
         let brand = map.remove("data-brand").map(String::from);
         let uri = map.remove("data-uri").map(String::from);
         let name = map.remove("data-name").map(String::from);
-        let price = map
-            .remove("data-price")
-            .map(|x| {
-                x.replace("S/.", "")
-                    .replace(',', "")
-                    .trim()
-                    .parse()
-                    .with_context(|| format!("Failed to parse price from: {:?}", x))
-            })
-            .transpose()?;
+        let price = map.remove("data-price").map(parse_price).transpose()?;
         let category = map.remove("data-category").map(String::from);
         if brand.is_none()
             && uri.is_none()
