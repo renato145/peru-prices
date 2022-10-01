@@ -1,0 +1,17 @@
+project:
+  type: website
+  preview:
+    port: 3000
+    browser: false
+
+website:
+  title: "peru-prices"
+ 
+format:
+  html:
+    table-of-contents: true
+    theme: cosmo
+    css: styles.css
+    toc: true
+    toc-depth: 4
+    # self-contained: true

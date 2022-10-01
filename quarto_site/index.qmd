@@ -1,0 +1,17 @@
+---
+title: "Posts"
+page-layout: full
+title-block-banner: true
+listing:
+  - id: notebooks
+    contents: "nbs/*.ipynb"
+    sort: "date desc"
+    type: table
+    categories: true
+    sort-ui: false
+    filter-ui: false
+---
+
+## Notebooks
+:::{#notebooks}
+:::
