@@ -1,0 +1,16 @@
+[
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Posts",
+    "section": "",
+    "text": "Date\n\n\nTitle\n\n\nAuthor\n\n\n\n\n\n\nSep 30, 2022\n\n\nExplore data\n\n\nRenato Hermoza\n\n\n\n\n\n\nNo matching items"
+  },
+  {
+    "objectID": "nbs/30092022_explore-data.html",
+    "href": "nbs/30092022_explore-data.html",
+    "title": "Explore data",
+    "section": "",
+    "text": "Code\npath = Path('../../output')\ncsv_files = L(path.glob('*.csv'))\npat_store = re.compile('(.+)\\_\\d+')\npat_date = re.compile('.+\\_(\\d+)')\ndf = (\n    pd.concat([pd.read_csv(o).assign(store=pat_store.match(o.stem)[1], date=pat_date.match(o.stem)[1])\n               for o in csv_files])\n    .pipe(lambda df: df.assign(\n        name=df.name.str.lower(),\n        sku=df.id.where(df.sku.isna(), df.sku).astype(int),\n        date=pd.to_datetime(df.date)\n    ))\n    .drop('id', axis=1)\n)\ndf.sample(3)\n\n\n\n\n\nData table\n  \n    \n      \n      brand\n      uri\n      name\n      price\n      category\n      store\n      date\n      sku\n    \n  \n  \n    \n      5430\n      SABOR DE ORO\n      https://www.plazavea.com.pe/gaseosa-sabor-de-o...\n      gaseosa sabor de oro botella 400ml\n      1.5\n      https://www.plazavea.com.pe/bebidas\n      plaza_vea\n      2022-09-19\n      58743\n    \n    \n      371\n      San Fernando\n      https://www.metro.pe/chorizo-parrillero-san-fe...\n      chorizo parrillero san fernando 400g\n      16.5\n      https://www.metro.pe/embutidos-y-fiambres/embu...\n      metro\n      2022-09-05\n      966783\n    \n    \n      5897\n      Clorox\n      https://www.metro.pe/limpiador-para-bano-cloro...\n      limpiador para baño clorox total 450ml\n      15.4\n      https://www.metro.pe/limpieza/limpieza-de-bano...\n      metro\n      2022-09-05\n      551948\n    \n  \n\n\n\n\n\n\nCode\nfig,ax = plt.subplots(figsize=(12,5))\nfor n,d in df.loc[df.name.isin(names)].assign(name=lambda d: d.name+' ('+d.store+')').groupby('name'):\n    d.plot(x='date', y='price', label=n, ax=ax)\nax.legend(bbox_to_anchor=(0.5,-0.3));\n\n\n\n\nPollo\n\n\n\n\n\n\n\nCode\nfig,ax = plt.subplots(figsize=(12,5))\nfor n,d in df.loc[df.name.isin(names)].assign(name=lambda d: d.name+' ('+d.store+')').groupby('name'):\n    d.plot(x='date', y='price', label=n, ax=ax)\nax.legend(bbox_to_anchor=(0.5,-0.3));\n\n\n\n\nPalta\n\n\n\n\n\n\n\nCode\nfig,ax = plt.subplots(figsize=(12,5))\nfor n,d in df.loc[df.name.isin(names)].assign(name=lambda d: d.name+' ('+d.store+')').groupby('name'):\n    d.plot(x='date', y='price', label=n, ax=ax)\nax.legend(bbox_to_anchor=(0.5,-0.3));\n\n\n\n\nAceite vegeta"
+  }
+]
