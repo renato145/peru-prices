@@ -6,3 +6,4 @@ output_dev
 peru-prices
 quarto_site/_site
 quarto_site/nbs/.ipynb_checkpoints
+quarto_site/_freeze/site_libs
