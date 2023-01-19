@@ -20,5 +20,6 @@ render-site:
   cd quarto_site
   quarto render
   cd ..
+  rm -r docs
   cp -r quarto_site/_site docs
 
