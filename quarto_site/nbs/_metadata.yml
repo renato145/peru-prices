@@ -8,3 +8,5 @@ freeze: true
 title-block-banner: true
 
 fig-cap-location: top
+
+warning: false
