@@ -23,3 +23,12 @@ render-site:
   rm -r docs
   cp -r quarto_site/_site docs
 
+render-exec-site:
+  #!/usr/bin/env bash
+  cd quarto_site
+  rm -rf _freeze
+  quarto render --execute
+  cd ..
+  rm -r docs
+  cp -r quarto_site/_site docs
+

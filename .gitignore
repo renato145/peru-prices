@@ -7,3 +7,4 @@ peru-prices
 quarto_site/_site
 quarto_site/nbs/.ipynb_checkpoints
 quarto_site/_freeze/site_libs
+quarto_site/_freeze
