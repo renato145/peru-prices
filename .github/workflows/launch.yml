@@ -22,3 +22,16 @@ jobs:
           timestamp=$(date -u)
           git commit -m "Latest data: ${timestamp}" || exit 0
           git push
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+          cache: 'pip'
+      - run: pip install -r requirements.txt
+      - uses: quarto-dev/quarto-actions/setup@v2
+      - uses: extractions/setup-just@v1
+      - name: Render quarto site
+        run: |
+          just render-exec-site
+          timestamp=$(date -u)
+          git commit -m "Latest quarto site: ${timestamp}" || exit 0
+          git push

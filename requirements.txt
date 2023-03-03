@@ -1,0 +1,7 @@
+jupyter
+pandas
+numpy
+matplotlib
+pytz
+fastcore
+altair==4.2
