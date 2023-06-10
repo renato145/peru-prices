@@ -4,4 +4,4 @@ numpy
 matplotlib
 pytz
 fastcore
-altair==4.2
+altair>=5.0

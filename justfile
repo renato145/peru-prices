@@ -15,6 +15,11 @@ checks:
 run-driver:
   chromedriver --port=4444 --disable-dev-shm-usage
 
+preview:
+  #!/usr/bin/env bash
+  cd quarto_site
+  quarto preview
+
 render-site:
   #!/usr/bin/env bash
   cd quarto_site
@@ -31,4 +36,3 @@ render-exec-site:
   cd ..
   rm -r docs
   cp -r quarto_site/_site docs
-
